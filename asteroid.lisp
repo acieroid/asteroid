@@ -2,6 +2,8 @@
 (defvar *height* 600)
 (defvar *max-speed* 10)
 (defvar *ship-size* 15)
+(defvar *accel* 0.1)
+(defvar *angle-step* 0.1)
 
 (defclass item ()
   ((x :accessor pos-x :initarg :x)
@@ -14,9 +16,9 @@
 
 (defmethod update ((item item))
   (setf (pos-x item)
-        (mod (+ (pos-x item) (vel-x item)) *width*))
+        (mod (round (+ (pos-x item) (vel-x item))) *width*))
   (setf (pos-y item)
-        (mod (+ (pos-y item) (vel-y item)) *height*)))
+        (mod (round (+ (pos-y item) (vel-y item))) *height*)))
 
 (defclass asteroid (item)
   ((size :accessor size :initarg :size :initform 10)))
@@ -42,15 +44,19 @@
        collect (spawn-asteroid)))
 
 (defclass ship (item)
-  ()) ; TODO: direction
+  ((direction :accessor dir :initarg :dir :initform 0)))
 
 (defmethod update ((ship ship))
   (when (sdl:key-held-p :SDL-KEY-UP)
-    (incf (vel-x ship))
-    (incf (vel-y ship)))
+    (incf (vel-x ship) (* *accel* (cos (dir ship))))
+    (incf (vel-y ship) (* *accel* (sin (dir ship)))))
   (when (sdl:key-held-p :SDL-KEY-DOWN)
-    (decf (vel-x ship))
-    (decf (vel-y ship)))
+    (decf (vel-x ship) (* *accel* (cos (dir ship))))
+    (decf (vel-y ship) (* *accel* (sin (dir ship)))))
+  (when (sdl:key-held-p :SDL-KEY-RIGHT)
+    (incf (dir ship) *angle-step*))
+  (when (sdl:key-held-p :SDL-KEY-LEFT)
+    (decf (dir ship) *angle-step*))
   (call-next-method))
 
 (defmethod draw ((ship ship))
