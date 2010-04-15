@@ -82,11 +82,13 @@
   (call-next-method))
 
 (defmethod draw ((ship ship))
-  (sdl:draw-box-* (pos-x ship)
-                  (pos-y ship)
-                  *ship-size*
-                  *ship-size*
-                  :color sdl:*red*))
+  (draw (translate (rotate (make-instance 'shape
+                                          :points 
+                                          `((,*ship-size* . ,(/ *ship-size* 2))
+                                            (0 . 0)
+                                            (0 . ,*ship-size*)))
+                    (dir ship))
+                   (pos-x ship) (pos-y ship))))
                  
 (defun start ()
   (let ((asteroids (spawn-asteroids 10))
@@ -106,17 +108,3 @@
           (update ship)
           (draw ship)
           (sdl:update-display))))))
-             
-
-(defun test-shapes ()
-  (let ((s (make-instance 'shape
-                          :points '((0 . 0) (0 . 10)
-                                    (10 . 10) (10 . 0)))))
-    (sdl:with-init ()
-      (sdl:window *width* *height*)
-      (sdl:with-events ()
-        (:quit-event () t)
-        (:idle ()
-               (sdl:clear-display sdl:*black*)
-               (draw (translate (rotate s (/ pi 4)) 100 100))
-               (sdl:update-display))))))
