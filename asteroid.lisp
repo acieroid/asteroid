@@ -1,6 +1,7 @@
 (defvar *width* 800)
 (defvar *height* 600)
 (defvar *max-speed* 10)
+(defvar *ship-size* 15)
 
 (defclass item ()
   ((x :accessor pos-x :initarg :x)
@@ -10,6 +11,12 @@
 
 (defgeneric update (item))
 (defgeneric draw (item))
+
+(defmethod update ((item item))
+  (setf (pos-x item)
+        (mod (+ (pos-x item) (vel-x item)) *width*))
+  (setf (pos-y item)
+        (mod (+ (pos-y item) (vel-y item)) *height*)))
 
 (defclass asteroid (item)
   ((size :accessor size :initarg :size :initform 10)))
@@ -21,10 +28,7 @@
                             :color sdl:*white*))
 
 (defmethod update ((asteroid asteroid))
-  (setf (pos-x asteroid)
-        (mod (+ (pos-x asteroid) (vel-x asteroid)) *width*))
-  (setf (pos-y asteroid)
-        (mod (+ (pos-y asteroid) (vel-y asteroid)) *height*)))
+  (call-next-method))
 
 (defun spawn-asteroid ()
   (make-instance 'asteroid
@@ -37,8 +41,32 @@
   (loop for i from 0 to n
        collect (spawn-asteroid)))
 
+(defclass ship (item)
+  ()) ; TODO: direction
+
+(defmethod update ((ship ship))
+  (when (sdl:key-held-p :SDL-KEY-UP)
+    (incf (vel-x ship))
+    (incf (vel-y ship)))
+  (when (sdl:key-held-p :SDL-KEY-DOWN)
+    (decf (vel-x ship))
+    (decf (vel-y ship)))
+  (call-next-method))
+
+(defmethod draw ((ship ship))
+  (sdl:draw-box-* (pos-x ship)
+                  (pos-y ship)
+                  *ship-size*
+                  *ship-size*
+                  :color sdl:*red*))
+                 
 (defun start ()
-  (let ((asteroids (spawn-asteroids 10)))
+  (let ((asteroids (spawn-asteroids 10))
+        (ship (make-instance 'ship
+                             :x (/ *width* 2)
+                             :y (/ *width* 2)
+                             :vx 0
+                             :vy 0)))
     (sdl:with-init ()
       (sdl:window *width* *height*)
       (sdl:with-events ()
@@ -47,6 +75,8 @@
           (sdl:clear-display sdl:*black*)
           (mapcar #'update asteroids)
           (mapcar #'draw asteroids)
+          (update ship)
+          (draw ship)
           (sdl:update-display))))))
              
       
