@@ -5,6 +5,28 @@
 (defvar *accel* 0.1)
 (defvar *angle-step* 0.1)
 
+(defclass shape ()
+  ((points :accessor points :initarg :points :initform nil)))
+
+(defmethod translate ((shape shape) x y)
+  (make-instance 'shape :points (mapcar (lambda (point)
+                                          (cons (+ (car point) x)
+                                                (+ (cdr point) y)))
+                                        (points shape))))
+(defmethod rotate ((shape shape) angle)
+  (make-instance 'shape :points (mapcar (lambda (point)
+                                          (cons (- (* (cos angle) (car point))
+                                                   (* (sin angle) (cdr point)))
+                                                (+ (* (sin angle) (car point))
+                                                   (* (cos angle) (cdr point)))))
+                                        (points shape))))
+
+(defmethod draw ((shape shape))
+  (sdl:draw-polygon
+   (mapcar (lambda (point)
+             (sdl:point :x (car point) :y (cdr point)))
+           (cons (car (last (points shape))) (points shape)))))
+
 (defclass item ()
   ((x :accessor pos-x :initarg :x)
    (y :accessor pos-y :initarg :y)
@@ -85,4 +107,16 @@
           (draw ship)
           (sdl:update-display))))))
              
-      
+
+(defun test-shapes ()
+  (let ((s (make-instance 'shape
+                          :points '((0 . 0) (0 . 10)
+                                    (10 . 10) (10 . 0)))))
+    (sdl:with-init ()
+      (sdl:window *width* *height*)
+      (sdl:with-events ()
+        (:quit-event () t)
+        (:idle ()
+               (sdl:clear-display sdl:*black*)
+               (draw (translate (rotate s (/ pi 4)) 100 100))
+               (sdl:update-display))))))
