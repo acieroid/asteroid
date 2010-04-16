@@ -8,7 +8,7 @@
 (defmacro deftrans (name args x y)
   (let ((shape (gensym))
         (point (gensym)))
-  `(defmethod ,name (,@args ,shape)
+  `(defmethod ,name (,@args (,shape cons))
      (mapcar (lambda (,point)
                (let ((p-x (car ,point))
                      (p-y (cdr ,point)))
