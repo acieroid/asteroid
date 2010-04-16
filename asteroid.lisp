@@ -1,12 +1,9 @@
 (defvar *width* 800)
 (defvar *height* 600)
 (defvar *max-speed* 10)
-(defvar *ship-size* 15)
-(defvar *accel* 0.1)
+(defvar *ship-size* 25)
+(defvar *accel* 0.5)
 (defvar *angle-step* 0.1)
-
-;(defclass shape ()
-;  ((points :accessor points :initarg :points :initform nil)))
 
 (defmacro deftrans (name args x y)
   (let ((shape (gensym))
@@ -40,7 +37,8 @@
   ((x :accessor pos-x :initarg :x)
    (y :accessor pos-y :initarg :y)
    (vx :accessor vel-x :initarg :vx)
-   (vy :accessor vel-y :initarg :vy)))
+   (vy :accessor vel-y :initarg :vy)
+   (shape :accessor shape :initarg :shape)))
 
 (defgeneric update (item))
 (defgeneric draw (item))
@@ -75,7 +73,10 @@
        collect (spawn-asteroid)))
 
 (defclass ship (item)
-  ((direction :accessor dir :initarg :dir :initform 0)))
+  ((direction :accessor dir :initarg :dir :initform 0)
+   (shape :initform `((0 . ,(- (/ *ship-size* 4)))
+                      (0 . ,(/ *ship-size* 4))
+                      (,*ship-size* . 0)))))
 
 (defmethod update ((ship ship))
   (when (sdl:key-held-p :SDL-KEY-UP)
@@ -91,13 +92,9 @@
   (call-next-method))
 
 (defmethod draw ((ship ship))
-  (draw (translate (rotate (make-instance 'shape
-                                          :points 
-                                          `((,*ship-size* . ,(/ *ship-size* 2))
-                                            (0 . 0)
-                                            (0 . ,*ship-size*)))
-                    (dir ship))
-                   (pos-x ship) (pos-y ship))))
+  (draw (translate (pos-x ship) (pos-y ship)
+                   (rotate (dir ship)
+                           (shape ship)))))
                  
 (defun start ()
   (let ((asteroids (spawn-asteroids 10))
@@ -117,18 +114,3 @@
           (update ship)
           (draw ship)
           (sdl:update-display))))))
-
-(defun test-shapes ()
-  (let ((s '((0 . 0) (0 . 10)
-             (10 . 10) (10 . 0))))
-    (sdl:with-init ()
-      (sdl:window *width* *height*)
-      (sdl:with-events ()
-        (:quit-event () t)
-        (:idle ()
-               (sdl:clear-display sdl:*black*)
-               (draw s)
-               (draw (rotate (/ pi 4) s))
-               (draw (scale 2 (rotate (/ pi 4) s)))
-               (draw (translate 100 100 (scale 2 (rotate (/ pi 4) s))))
-               (sdl:update-display))))))
