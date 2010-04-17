@@ -4,6 +4,19 @@
 (defvar *ship-size* 25)
 (defvar *accel* 0.5)
 (defvar *angle-step* 0.1)
+(defvar *asteroid-shapes*
+  (list
+   (make-shape (0 1)
+               (0.5 0.8)
+               (1 0)
+               (0.8 0.7)
+               (0 -1)
+               (-0.4 -0.4)
+               (-1 0)
+               (-0.5 0.4))))
+
+(defun random-elt (list)
+  (elt list (random (length list))))
 
 ;;; Shapes
 (defmacro make-shape (&rest points)
@@ -45,7 +58,7 @@
    (y :accessor pos-y :initarg :y)
    (vx :accessor vel-x :initarg :vx)
    (vy :accessor vel-y :initarg :vy)
-   (shape :accessor shape :initarg :shape)))
+   (shape :accessor shape :initform nil)))
 
 (defgeneric update (item))
 (defgeneric draw (item))
@@ -59,11 +72,14 @@
 (defclass asteroid (item)
   ((size :accessor size :initarg :size :initform 10)))
 
-;(defmethod initialize-instance :after ((asteroid asteroid))
-;  (setf (shape asteroid) (random-elt *asteroid-shapes*)))
-
+(defmethod initialize-instance :after ((asteroid asteroid) &rest initargs)
+  (declare (ignore initargs))
+  (setf (shape asteroid) (random-elt *asteroid-shapes*)))
 
 (defmethod draw ((asteroid asteroid))
+  (draw (translate (pos-x asteroid) (pos-y asteroid)
+                   (scale (size asteroid) (shape asteroid)))))
+
   (sdl:draw-filled-circle-* (pos-x asteroid)
                             (pos-y asteroid)
                             (size asteroid)
