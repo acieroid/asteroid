@@ -5,6 +5,13 @@
 (defvar *accel* 0.5)
 (defvar *angle-step* 0.1)
 
+;;; Shapes
+(defmacro make-shape (&rest points)
+  `(list
+    ,@(loop for p in points
+          collect `(cons ,(car p)
+                         ,(cadr p)))))
+   
 (defmacro deftrans (name args x y)
   (let ((shape (gensym))
         (point (gensym)))
@@ -52,6 +59,10 @@
 (defclass asteroid (item)
   ((size :accessor size :initarg :size :initform 10)))
 
+;(defmethod initialize-instance :after ((asteroid asteroid))
+;  (setf (shape asteroid) (random-elt *asteroid-shapes*)))
+
+
 (defmethod draw ((asteroid asteroid))
   (sdl:draw-filled-circle-* (pos-x asteroid)
                             (pos-y asteroid)
@@ -75,9 +86,9 @@
 
 (defclass ship (item)
   ((direction :accessor dir :initarg :dir :initform 0)
-   (shape :initform `((0 . ,(- (/ *ship-size* 4)))
-                      (0 . ,(/ *ship-size* 4))
-                      (,*ship-size* . 0)))))
+   (shape :initform (make-shape (0 (- (/ *ship-size*) 4))
+                                (0 (/ *ship-size* 4))
+                                (*ship-size* 0)))))
 
 (defmethod update ((ship ship))
   (when (sdl:key-held-p :SDL-KEY-UP)
