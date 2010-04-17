@@ -3,6 +3,7 @@
 (defvar *max-speed* 10)
 (defvar *ship-size* 25)
 (defvar *accel* 0.5)
+(defvar *decel* 0.02)
 (defvar *angle-step* 0.1)
 (defvar *asteroid-shapes*
   (list
@@ -147,7 +148,9 @@
   (when (sdl:key-held-p :SDL-KEY-RIGHT)
     (incf (dir ship) *angle-step*))
   (when (sdl:key-held-p :SDL-KEY-LEFT)
-    (decf (dir ship) *angle-step*)))
+    (decf (dir ship) *angle-step*))
+  (incf (vel-x ship) (- (* *decel* (vel-x ship))))
+  (incf (vel-y ship) (- (* *decel* (vel-y ship)))))
 
 (defmethod draw ((ship ship))
   (draw (translate (pos-x ship) (pos-y ship)
