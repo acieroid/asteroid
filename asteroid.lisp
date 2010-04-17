@@ -70,24 +70,21 @@
         (mod (round (+ (pos-y item) (vel-y item))) *height*)))
 
 (defclass asteroid (item)
-  ((size :accessor size :initarg :size :initform 10)))
+  ((size :accessor size :initarg :size :initform 10)
+   (direction :accessor dir)))
 
 (defmethod initialize-instance :after ((asteroid asteroid) &rest initargs)
   (declare (ignore initargs))
-  (setf (shape asteroid) (random-elt *asteroid-shapes*)))
+  (setf (shape asteroid) (random-elt *asteroid-shapes*))
+  (setf (dir asteroid) (random (* 2 pi))))
 
 (defmethod draw ((asteroid asteroid))
   (draw (translate (pos-x asteroid) (pos-y asteroid)
-                   (scale (size asteroid) (shape asteroid)))))
-
-  (sdl:draw-filled-circle-* (pos-x asteroid)
-                            (pos-y asteroid)
-                            (size asteroid)
-                            :color sdl:*white*))
+                   (rotate (dir asteroid)
+                           (scale (size asteroid) (shape asteroid))))))
 
 (defmethod update ((asteroid asteroid))
-  )
-
+  (incf (dir asteroid) 0.1))
 
 (defun spawn-asteroid ()
   (make-instance 'asteroid
