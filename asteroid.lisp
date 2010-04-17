@@ -6,14 +6,40 @@
 (defvar *angle-step* 0.1)
 (defvar *asteroid-shapes*
   (list
-   (make-shape (0 1)
-               (0.5 0.8)
-               (1 0)
-               (0.8 0.7)
-               (0 -1)
-               (-0.4 -0.4)
-               (-1 0)
-               (-0.5 0.4))))
+   (make-shape
+    (-0.5818636 -0.72732955) (-0.9697728 -0.34911817)
+    (-1.0085635 0.05818636) (-0.7564226 0.45579323)
+    (-0.32972267 0.30062956) (-0.50428176 0.6885387)
+    (-0.09697727 0.8534) (0.31032723 0.72732955) (0.7564226 0.41700226)
+    (0.7952135 0.038790904) (0.7952135 -0.3782113)
+    (0.52367723 -0.7079341) (0.26183861 -0.8437025)
+    (-0.17455909 -0.91158646))
+   (make-shape
+    (0.81693643 -1.0840118)
+    (0.60484713 -1.3275216)
+    (-0.58128196 -0.96618444)
+    (-0.400613 -0.5262956)
+    (0.039275795 0.03142063)
+    (-0.5184403 0.64412296)
+    (0.149248 0.9897498)
+    (1.0054601 0.25136504)
+    (0.78551596 -0.6284127)
+    (0.19637899 -0.73838496)
+    )
+   (make-shape
+    (0.2926612 -0.70504737)
+    (0.19954172 -0.9711031)
+    (-0.1463306 -0.9444976)
+    (-0.5321113 -0.6518361)
+    (-0.7316528 -0.10642224)
+    (-0.61192787 0.4655973)
+    (-0.23945007 0.7449558)
+    (0.22614725 0.67844176)
+    (0.7316528 0.4522945)
+    (0.9711031 -0.039908342)
+    (0.9844062 -0.61192787)
+    (0.6252308 -0.9977087))))
+
 
 (defun random-elt (list)
   (elt list (random (length list))))
@@ -28,7 +54,7 @@
 (defmacro deftrans (name args x y)
   (let ((shape (gensym))
         (point (gensym)))
-  `(defmethod ,name (,@args (,shape cons))
+  `(defmethod ,name (,@args (,shape list))
      (mapcar (lambda (,point)
                (let ((p-x (car ,point))
                      (p-y (cdr ,point)))
@@ -47,11 +73,19 @@
   (* p-x factor)
   (* p-y factor))
  
-(defmethod draw ((shape cons))
-  (sdl:draw-polygon
-   (mapcar (lambda (point)
-             (sdl:point :x (car point) :y (cdr point)))
-           (cons (car (last shape)) shape))))
+(defmethod draw ((shape list))
+  (when shape
+    (sdl:draw-polygon
+     (mapcar (lambda (point)
+               (sdl:point :x (car point) :y (cdr point)))
+             (cons (car (last shape)) shape)))))
+
+(defmethod print-shape ((shape list))
+  (princ "(make-shape") (princ #\Newline)
+  (mapcar (lambda (pt) 
+            (format t " (~a ~a)~%" (car pt) (cdr pt)))
+          shape)
+  (princ ")") (princ #\Newline))
 
 (defclass item ()
   ((x :accessor pos-x :initarg :x)
@@ -137,4 +171,32 @@
           (mapcar #'draw asteroids)
           (update ship)
           (draw ship)
+          (sdl:update-display))))))
+
+(defun shape-creator ()
+  (let* (s
+         (ofx (/ *width* 2))
+         (ofy (/ *height* 2))
+         (axis-x (make-shape (ofx 0) (ofx *height*)))
+         (axis-y (make-shape (0 ofy) (*width* ofy))))
+    (sdl:with-init ()
+      (sdl:window *width* *height*)
+      (sdl:with-events ()
+        (:quit-event () t)
+        (:mouse-button-down-event (:button button :x x :y y)
+          (case button
+            ; left click
+            (1 (push (cons (- x ofx) (- y ofy)) s))
+            ; right click
+            (3 (setf s nil))
+            ; wheel up
+            (4 (setf s (scale 1.1 s)))
+            ; wheel down
+            (5 (setf s (scale 0.9 s))))
+          (print-shape s))
+        (:idle ()
+          (sdl:clear-display sdl:*black*)
+          (draw axis-x)
+          (draw axis-y)
+          (draw (translate ofx ofy s))
           (sdl:update-display))))))
