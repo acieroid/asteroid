@@ -5,6 +5,9 @@
 (defvar *accel* 0.5)
 (defvar *decel* 0.02)
 (defvar *angle-step* 0.1)
+(defvar *bullet-size* 10)
+(defvar *bullet-speed* 10)
+(defvar *bullet-life* 50)
 (defvar *asteroid-shapes*
   (list
    (make-shape
@@ -132,6 +135,23 @@
   (loop for i from 0 to n
        collect (spawn-asteroid)))
 
+(defclass bullet (item)
+  ((direction :accessor dir :initarg :dir)
+   (shape :initform (make-shape (0 0) (*bullet-size* 0)))
+   (life :accessor life :initform *bullet-life*)))
+
+(defmethod initialize-instance :after ((bullet bullet) &rest initargs)
+  (declare (ignore initargs))
+  (setf (vel-x bullet) (* *bullet-speed* (cos (dir bullet))))
+  (setf (vel-y bullet) (* *bullet-speed* (sin (dir bullet)))))
+
+(defmethod update ((bullet bullet))
+  (decf (life bullet)))
+
+(defmethod draw ((bullet bullet))
+  (draw (translate (pos-x bullet) (pos-y bullet)
+                   (rotate (dir bullet) (shape bullet)))))
+
 (defclass ship (item)
   ((direction :accessor dir :initarg :dir :initform 0)
    (shape :initform (make-shape (0 (- (/ *ship-size*) 4))
@@ -163,13 +183,25 @@
                              :x (/ *width* 2)
                              :y (/ *width* 2)
                              :vx 0
-                             :vy 0)))
+                             :vy 0))
+        bullets)
     (sdl:with-init ()
       (sdl:window *width* *height*)
       (sdl:with-events ()
         (:quit-event () t)
+        (:key-down-event (:key key)
+          (when (eq key :SDL-KEY-SPACE)
+            (push (make-instance 'bullet
+                                 :x (pos-x ship)
+                                 :y (pos-y ship)
+                                 :dir (dir ship))
+                  bullets)))
         (:idle ()
           (sdl:clear-display sdl:*black*)
+          (setf bullets (remove-if-not (lambda (bullet) (> (life bullet) 0))
+                                       bullets))
+          (mapcar #'update bullets)
+          (mapcar #'draw bullets)
           (mapcar #'update asteroids)
           (mapcar #'draw asteroids)
           (update ship)
