@@ -43,7 +43,7 @@
 (defgeneric update (item))
 (defgeneric draw (item))
 
-(defmethod update ((item item))
+(defmethod update :after ((item item))
   (setf (pos-x item)
         (mod (round (+ (pos-x item) (vel-x item))) *width*))
   (setf (pos-y item)
@@ -59,7 +59,8 @@
                             :color sdl:*white*))
 
 (defmethod update ((asteroid asteroid))
-  (call-next-method))
+  )
+
 
 (defun spawn-asteroid ()
   (make-instance 'asteroid
@@ -88,8 +89,7 @@
   (when (sdl:key-held-p :SDL-KEY-RIGHT)
     (incf (dir ship) *angle-step*))
   (when (sdl:key-held-p :SDL-KEY-LEFT)
-    (decf (dir ship) *angle-step*))
-  (call-next-method))
+    (decf (dir ship) *angle-step*)))
 
 (defmethod draw ((ship ship))
   (draw (translate (pos-x ship) (pos-y ship)
