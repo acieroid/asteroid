@@ -92,28 +92,25 @@
   (princ ")") (princ #\Newline))
 
 (defmethod contain-point ((shape list) point)
-  (let (oddp
-        (x (car point))
-        (y (car point)))
-    (do* ((pts shape (rest pts))
-          (last-pt (car (last pts)) pt)
-          (pt (car pts) (car pts)))
-         ((null pts) oddp)
-      (let ((xi (car pt))
-            (yi (cdr pt))
-            (xj (car last-pt))
-            (yj (cdr last-pt)))
-        (when (and
-               (or (and (<= yi y) (< y yj))
-                   (and (<= yj y) (< y yi)))
-               (< x (+ (/ (* (- xj xi) (- y yi)) (- yj yi )) xi)))
-          (setf oddp (not oddp)))))))
-
-(defmethod collides ((s1 list) (s2 list))
-  (when s1
-    (if (not (contain-point s2 (first s1)))
-      (collides (rest s1) s2)
-      t)))
+  (flet ((xor (x y)
+           (or (and x (not y)) (and y (not x)))))
+    (let (oddp
+          (x (car point))
+          (y (car point)))
+      (do* ((pts shape (rest pts))
+            (last-pt (car (last pts)) pt)
+            (pt (car pts) (car pts)))
+           ((null pts) oddp)
+        (let ((xi (car pt))
+              (yi (cdr pt))
+              (xj (car last-pt))
+              (yj (cdr last-pt)))
+          (when (and
+                 (xor (> yi y) (> yj y))
+                 (< x (+ (/ (* (- xj xi) (- y yi))
+                            (- yj yi))
+                         xi)))
+          (setf oddp (not oddp))))))))
 
 (defclass item ()
   ((x :accessor pos-x :initarg :x)
@@ -129,14 +126,8 @@
   (setf (pos-y item)
         (mod (round (+ (pos-y item) (vel-y item))) *height*)))
 
-(defmethod collides ((i1 item) (i2 item))
-  (collides (translate (pos-x i1) (pos-y i1)
-                       (rotate (dir i1) (shape i1)))
-            (translate (pos-x i2) (pos-y i2)
-                       (rotate (dir i2) (shape i2)))))
-
 (defclass asteroid (item)
-  ((size :accessor size :initarg :size :initform 10)))
+  ((size :accessor size :initarg :size :initform 25)))
 
 (defmethod initialize-instance :after ((asteroid asteroid) &rest initargs)
   (declare (ignore initargs))
@@ -145,11 +136,30 @@
 
 (defmethod draw ((asteroid asteroid))
   (draw (translate (pos-x asteroid) (pos-y asteroid)
-                   (rotate (dir asteroid)
-                           (scale (size asteroid) (shape asteroid))))))
+                   (scale (size asteroid)
+                          (rotate (dir asteroid) (shape asteroid))))))
 
 (defmethod update ((asteroid asteroid))
   (incf (dir asteroid) 0.1))
+
+(defun point-in-circle (x y r point)
+  (<= (+ (expt (- (car point) x) 2)
+         (expt (- (cdr point) y) 2))
+      (expt r 2)))
+
+; TODO: it assume the asteroid as some sort of circular shape, we
+; should use better collision detection, like point-in-polygon algorithm
+(defmethod collides ((asteroid asteroid) (shape list))
+  (when shape
+    (if (point-in-circle (pos-x asteroid) (pos-y asteroid) (size asteroid)
+                         (first shape))
+        t
+        (collides asteroid (rest shape)))))
+
+(defmethod collides ((asteroid asteroid) (item item))
+  (collides asteroid
+            (translate (pos-x item) (pos-y item)
+                       (rotate (dir item) (shape item)))))
 
 (defun spawn-asteroid ()
   (make-instance 'asteroid
@@ -223,7 +233,7 @@
                                   :x (pos-x ship)
                                   :y (pos-y ship)
                                   :dir (dir ship))
-                   bullets)))
+                   bullets))))
         (:idle ()
           (sdl:clear-display sdl:*black*)
           (setf bullets (remove-if-not (lambda (bullet) (> (life bullet) 0))
@@ -232,6 +242,11 @@
           (mapcar #'draw bullets)
           (mapcar #'update asteroids)
           (mapcar #'draw asteroids)
+          (when (remove-if-not (lambda (x) (collides x ship)) asteroids)
+            (setf (pos-x ship) (/ *width* 2))
+            (setf (pos-y ship) (/ *height* 2))
+            (setf (vel-x ship) 0)
+            (setf (vel-y ship) 0))
           (update ship)
           (draw ship)
           (sdl:update-display))))))
@@ -249,6 +264,8 @@
           (case button
             ; left click
             (1 (push (cons (- x ofx) (- y ofy)) shape))
+            (2 (format t "~a~%" (contain-point shape
+                                               (cons (- x ofx) (- y ofy)))))
             ; right click
             (3 (setf shape nil))
             ; wheel up
