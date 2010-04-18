@@ -8,42 +8,7 @@
 (defvar *bullet-size* 10)
 (defvar *bullet-speed* 10)
 (defvar *bullet-life* 50)
-(defvar *asteroid-shapes*
-  (list
-   (make-shape
-    (-0.5818636 -0.72732955) (-0.9697728 -0.34911817)
-    (-1.0085635 0.05818636) (-0.7564226 0.45579323)
-    (-0.32972267 0.30062956) (-0.50428176 0.6885387)
-    (-0.09697727 0.8534) (0.31032723 0.72732955) (0.7564226 0.41700226)
-    (0.7952135 0.038790904) (0.7952135 -0.3782113)
-    (0.52367723 -0.7079341) (0.26183861 -0.8437025)
-    (-0.17455909 -0.91158646))
-   (make-shape
-    (0.81693643 -1.0840118)
-    (0.60484713 -1.3275216)
-    (-0.58128196 -0.96618444)
-    (-0.400613 -0.5262956)
-    (0.039275795 0.03142063)
-    (-0.5184403 0.64412296)
-    (0.149248 0.9897498)
-    (1.0054601 0.25136504)
-    (0.78551596 -0.6284127)
-    (0.19637899 -0.73838496)
-    )
-   (make-shape
-    (0.2926612 -0.70504737)
-    (0.19954172 -0.9711031)
-    (-0.1463306 -0.9444976)
-    (-0.5321113 -0.6518361)
-    (-0.7316528 -0.10642224)
-    (-0.61192787 0.4655973)
-    (-0.23945007 0.7449558)
-    (0.22614725 0.67844176)
-    (0.7316528 0.4522945)
-    (0.9711031 -0.039908342)
-    (0.9844062 -0.61192787)
-    (0.6252308 -0.9977087))))
-
+(defvar *asteroid-shapes*)
 
 (defun random-elt (list)
   (elt list (random (length list))))
@@ -200,8 +165,8 @@
     (incf (vel-x ship) (* *accel* (cos (dir ship))))
     (incf (vel-y ship) (* *accel* (sin (dir ship)))))
   (when (sdl:key-held-p :SDL-KEY-DOWN)
-    (decf (vel-x ship) (* *accel* (cos (dir ship))))
-    (decf (vel-y ship) (* *accel* (sin (dir ship)))))
+    (incf (vel-x ship) (- (* (/ *accel* 8) (vel-x ship))))
+    (incf (vel-y ship) (- (* (/ *accel* 8) (vel-y ship)))))
   (when (sdl:key-held-p :SDL-KEY-RIGHT)
     (incf (dir ship) *angle-step*))
   (when (sdl:key-held-p :SDL-KEY-LEFT)
@@ -215,7 +180,7 @@
                            (shape ship)))))
                  
 (defun start ()
-  (let ((asteroids (spawn-asteroids 10))
+  (let ((asteroids (spawn-asteroids 3))
         (ship (make-instance 'ship
                              :x (/ *width* 2)
                              :y (/ *width* 2)
