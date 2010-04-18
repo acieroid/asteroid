@@ -91,6 +91,27 @@
           shape)
   (princ ")") (princ #\Newline))
 
+(defmethod contain-point ((shape list) point)
+  (let (oddp
+        (x (car point))
+        (y (car point)))
+    (do* ((pts shape (rest pts))
+          (last-pt (car (last pts)) pt)
+          (pt (car pts) (car pts)))
+         ((null pts) oddp)
+      (let ((xi (car pt))
+            (yi (cdr pt))
+            (xj (car last-pt))
+            (yj (cdr last-pt)))
+        (when (and
+               (or (and (<= yi y) (< y yj))
+                   (and (<= yj y) (< y yi)))
+               (< x (+ (/ (* (- xj xi) (- y yi)) (- yj yi )) xi)))
+          (setf oddp (not oddp)))))))
+                          
+              
+       
+
 (defclass item ()
   ((x :accessor pos-x :initarg :x)
    (y :accessor pos-y :initarg :y)
