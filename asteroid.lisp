@@ -236,9 +236,8 @@
           (draw ship)
           (sdl:update-display))))))
 
-(defun shape-creator ()
-  (let* (s
-         (ofx (/ *width* 2))
+(defun shape-editor (&rest shape)
+  (let* ((ofx (/ *width* 2))
          (ofy (/ *height* 2))
          (axis-x (make-shape (ofx 0) (ofx *height*)))
          (axis-y (make-shape (0 ofy) (*width* ofy))))
@@ -249,17 +248,17 @@
         (:mouse-button-down-event (:button button :x x :y y)
           (case button
             ; left click
-            (1 (push (cons (- x ofx) (- y ofy)) s))
+            (1 (push (cons (- x ofx) (- y ofy)) shape))
             ; right click
-            (3 (setf s nil))
+            (3 (setf shape nil))
             ; wheel up
-            (4 (setf s (scale 1.1 s)))
+            (4 (setf shape (scale 1.1 shape)))
             ; wheel down
-            (5 (setf s (scale 0.9 s))))
-          (print-shape s))
+            (5 (setf shape (scale 0.9 shape))))
+          (print-shape shape))
         (:idle ()
           (sdl:clear-display sdl:*black*)
           (draw axis-x)
           (draw axis-y)
-          (draw (translate ofx ofy s))
+          (draw (translate ofx ofy shape))
           (sdl:update-display))))))
