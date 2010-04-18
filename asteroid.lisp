@@ -9,6 +9,7 @@
 (defvar *bullet-speed* 10)
 (defvar *bullet-life* 50)
 (defvar *asteroid-shapes*)
+(defvar *min-size* 15)
 
 (defun random-elt (list)
   (elt list (random (length list))))
@@ -56,32 +57,11 @@
           shape)
   (princ ")") (princ #\Newline))
 
-(defmethod contain-point ((shape list) point)
-  (flet ((xor (x y)
-           (or (and x (not y)) (and y (not x)))))
-    (let (oddp
-          (x (car point))
-          (y (car point)))
-      (do* ((pts shape (rest pts))
-            (last-pt (car (last pts)) pt)
-            (pt (car pts) (car pts)))
-           ((null pts) oddp)
-        (let ((xi (car pt))
-              (yi (cdr pt))
-              (xj (car last-pt))
-              (yj (cdr last-pt)))
-          (when (and
-                 (xor (> yi y) (> yj y))
-                 (< x (+ (/ (* (- xj xi) (- y yi))
-                            (- yj yi))
-                         xi)))
-          (setf oddp (not oddp))))))))
-
 (defclass item ()
-  ((x :accessor pos-x :initarg :x)
-   (y :accessor pos-y :initarg :y)
-   (vx :accessor vel-x :initarg :vx)
-   (vy :accessor vel-y :initarg :vy)
+  ((x :accessor pos-x :i:nitarg :x :initform 0)
+   (y :accessor pos-y :initarg :y :initform 0)
+   (vx :accessor vel-x :initarg :vx :initform 0)
+   (vy :accessor vel-y :initarg :vy :initform 0)
    (direction :accessor dir :initarg :dir :initform 0)
    (shape :accessor shape :initform nil)))
 
@@ -95,9 +75,18 @@
   ((size :accessor size :initarg :size :initform 25)))
 
 (defmethod initialize-instance :after ((asteroid asteroid) &rest initargs)
-  (declare (ignore initargs))
-  (setf (shape asteroid) (random-elt *asteroid-shapes*))
-  (setf (dir asteroid) (random (* 2 pi))))
+  ; TODO: write some macro to avoid repetitions like that
+  (when (not (find :dir initargs))
+    (setf (dir asteroid) (random (* 2 pi))))
+  (when (not (find :x initargs))
+    (setf (pos-x asteroid) (random *width*)))
+  (when (not (find :y initargs))
+    (setf (pos-y asteroid) (random *height*)))
+  (when (not (find :vx initargs))
+    (setf (vel-x asteroid) (random *max-speed*)))
+  (when (not (find :vy initargs))
+    (setf (vel-y asteroid) (random *max-speed*)))
+  (setf (shape asteroid) (random-elt *asteroid-shapes*)))
 
 (defmethod draw ((asteroid asteroid))
   (draw (translate (pos-x asteroid) (pos-y asteroid)
@@ -126,16 +115,14 @@
             (translate (pos-x item) (pos-y item)
                        (rotate (dir item) (shape item)))))
 
-(defun spawn-asteroid ()
-  (make-instance 'asteroid
-                 :x (random *width*)
-                 :y (random *height*)
-                 :vx (random *max-speed*)
-                 :vy (random *max-speed*)))
+(defmethod next-size ((asteroid asteroid))
+  (if (< (size asteroid) *min-size*)
+      0
+      (/ (size asteroid) 2)))
 
-(defun spawn-asteroids (n)
-  (loop for i from 0 to n
-       collect (spawn-asteroid)))
+(defmacro spawn-asteroids (n &rest initargs)
+  `(loop for i from 1 to ,n
+       collect (make-instance 'asteroid ,@initargs)))
 
 (defclass bullet (item)
   ((direction :accessor dir :initarg :dir)
@@ -180,7 +167,7 @@
                            (shape ship)))))
                  
 (defun start ()
-  (let ((asteroids (spawn-asteroids 3))
+  (let ((asteroids (spawn-asteroids 4))
         (ship (make-instance 'ship
                              :x (/ *width* 2)
                              :y (/ *width* 2)
@@ -201,8 +188,29 @@
                    bullets))))
         (:idle ()
           (sdl:clear-display sdl:*black*)
+          (mapcar
+           (lambda (bullet)
+             (let ((asteroid (first
+                              (remove-if-not (lambda (x) (collides x bullet))
+                                             asteroids))))
+               (when asteroid
+                 ; collision between asteroid and bullet
+                 (setf (life bullet) 0) ; destroy the bullet
+                 (let ((new-size (next-size asteroid)))
+                   ; decrease the size and spawn new asteroids
+                   (setf (size asteroid) new-size)
+                   (nconc asteroids (spawn-asteroids 1
+                                                     :x (pos-x asteroid)
+                                                     :y (pos-y asteroid)
+                                                     :size new-size))
+                   ))))
+           bullets)
+          ; remove end-of-life'd bullets and zero-sized asteroids
           (setf bullets (remove-if-not (lambda (bullet) (> (life bullet) 0))
                                        bullets))
+          (setf asteroids (remove-if-not (lambda (asteroid)
+                                           (> (size asteroid) 0))
+                                         asteroids))
           (mapcar #'update bullets)
           (mapcar #'draw bullets)
           (mapcar #'update asteroids)
