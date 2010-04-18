@@ -108,19 +108,20 @@
                    (and (<= yj y) (< y yi)))
                (< x (+ (/ (* (- xj xi) (- y yi)) (- yj yi )) xi)))
           (setf oddp (not oddp)))))))
-                          
-              
-       
+
+(defmethod collides ((s1 list) (s2 list))
+  (when s1
+    (if (not (contain-point s2 (first s1)))
+      (collides (rest s1) s2)
+      t)))
 
 (defclass item ()
   ((x :accessor pos-x :initarg :x)
    (y :accessor pos-y :initarg :y)
    (vx :accessor vel-x :initarg :vx)
    (vy :accessor vel-y :initarg :vy)
+   (direction :accessor dir :initarg :dir :initform 0)
    (shape :accessor shape :initform nil)))
-
-(defgeneric update (item))
-(defgeneric draw (item))
 
 (defmethod update :after ((item item))
   (setf (pos-x item)
@@ -128,9 +129,14 @@
   (setf (pos-y item)
         (mod (round (+ (pos-y item) (vel-y item))) *height*)))
 
+(defmethod collides ((i1 item) (i2 item))
+  (collides (translate (pos-x i1) (pos-y i1)
+                       (rotate (dir i1) (shape i1)))
+            (translate (pos-x i2) (pos-y i2)
+                       (rotate (dir i2) (shape i2)))))
+
 (defclass asteroid (item)
-  ((size :accessor size :initarg :size :initform 10)
-   (direction :accessor dir)))
+  ((size :accessor size :initarg :size :initform 10)))
 
 (defmethod initialize-instance :after ((asteroid asteroid) &rest initargs)
   (declare (ignore initargs))
@@ -211,12 +217,13 @@
       (sdl:with-events ()
         (:quit-event () t)
         (:key-down-event (:key key)
-          (when (eq key :SDL-KEY-SPACE)
-            (push (make-instance 'bullet
-                                 :x (pos-x ship)
-                                 :y (pos-y ship)
-                                 :dir (dir ship))
-                  bullets)))
+          (case key
+            (:SDL-KEY-SPACE
+             (push (make-instance 'bullet
+                                  :x (pos-x ship)
+                                  :y (pos-y ship)
+                                  :dir (dir ship))
+                   bullets)))
         (:idle ()
           (sdl:clear-display sdl:*black*)
           (setf bullets (remove-if-not (lambda (bullet) (> (life bullet) 0))
